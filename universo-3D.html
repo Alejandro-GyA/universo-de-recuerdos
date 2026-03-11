@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universo de Recuerdos</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Georgia', serif; }
+        .interface {
+            position: absolute; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: flex-start;
+            align-items: center; padding: 40px 0; pointer-events: none; z-index: 10;
+        }
+        .titulo {
+            color: white; font-size: 2.8rem;
+            text-shadow: 0 0 20px #ff69b4, 0 0 40px #ff1493; margin-top: 10px;
+        }
+        /* MENSAJE DE INSTRUCCIÓN MEJORADO */
+        #instruccion {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; background: rgba(255, 20, 147, 0.6);
+            padding: 20px 40px; border-radius: 50px; border: 2px solid #ffffff;
+            font-size: 1.5rem; opacity: 0; transition: opacity 0.5s;
+            pointer-events: none; z-index: 200; backdrop-filter: blur(10px);
+            text-align: center; box-shadow: 0 0 30px #ff1493;
+            white-space: nowrap;
+        }
+        #pantallaCarga {
+            position: absolute; width: 100%; height: 100%; background: black;
+            display: flex; justify-content: center; align-items: center;
+            color: white; z-index: 500; cursor: pointer; font-size: 1.5rem;
+            text-shadow: 0 0 15px #ff69b4;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="pantallaCarga">✨ HAZ CLIC PARA EMPEZAR EL VIAJE ✨</div>
+
+    <div class="interface">
+        <h1 class="titulo">Feliz Cumpleaños 🤗💫</h1>
+    <div id="mensajes-romanticos" style="text-align: center; color: #ffb6c1; text-shadow: 0 0 15px rgba(0, 0, 0, 1); pointer-events: none; transition: opacity 1.5s;">
+        <h2 style="font-size: 1.8rem; margin: 0;">Espero te guste esta otra sorpresa 🎁</h2>
+        <p style="font-size: 1.1rem; font-style: italic; margin-top: 8px;">En este dia tan especial para ti ✨ (no tenia mas fotos tuyas 😖).</p>
+    </div>
+</div>
+
+    <div id="instruccion">✨ Ya puedes moverte y hacer zoom libremente ✨</div>
+
+    <audio id="miMusica" loop>
+        <source src="perfect.mp3" type="audio/mpeg">
+    </audio>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        document.body.appendChild(renderer.domElement);
+
+        // Estrellas
+        const starsGeo = new THREE.BufferGeometry();
+        const starsPos = [];
+        for(let i=0; i<10000; i++) starsPos.push((Math.random()-0.5)*120, (Math.random()-0.5)*120, (Math.random()-0.5)*120);
+        starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
+        scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.015 })));
+
+        // Mundo Central Sólido con Plasma
+        const mundoGrupo = new THREE.Group();
+        const nucMat = new THREE.MeshStandardMaterial({ color: 0xff1493, emissive: 0xff69b4, emissiveIntensity: 0.7 });
+        mundoGrupo.add(new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), nucMat));
+
+        const plasmaMat = new THREE.ShaderMaterial({
+            uniforms: { time: { value: 0 }, color: { value: new THREE.Color(0xff69b4) } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            fragmentShader: `varying vec2 vUv; uniform float time; uniform vec3 color; float noise(vec2 p) { return sin(p.x * 12.0 + time) * cos(p.y * 8.0 + time); } void main() { float n = noise(vUv * 4.0); gl_FragColor = vec4(color, smoothstep(0.0, 0.8, n) * 0.4); }`,
+            transparent: true, blending: THREE.AdditiveBlending
+        });
+        mundoGrupo.add(new THREE.Mesh(new THREE.SphereGeometry(2.53, 64, 64), plasmaMat));
+        scene.add(mundoGrupo);
+
+        // Fotos Adaptables
+        const loader = new THREE.TextureLoader();
+        const misFotos = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg'];
+        const fotosGroup = new THREE.Group();
+
+        misFotos.forEach((nombre, i) => {
+            loader.load(nombre, (texture) => {
+                texture.encoding = THREE.sRGBEncoding;
+                const aspecto = texture.image.width / texture.image.height;
+                const mat = new THREE.ShaderMaterial({
+                    uniforms: { uTexture: { value: texture } },
+                    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+                    fragmentShader: `varying vec2 vUv; uniform sampler2D uTexture; void main() { vec2 uv = vUv - 0.5; if (length(max(abs(uv) - 0.43, 0.0)) > 0.08) discard; gl_FragColor = texture2D(uTexture, vUv); }`,
+                    transparent: true, side: THREE.DoubleSide
+                });
+                for(let j=0; j<20; j++) {
+                    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2 * aspecto, 1.2), mat);
+                    const index = i * 20 + j;
+                    const phi = Math.acos(-1 + (2 * index) / 80);
+                    const theta = Math.sqrt(80 * Math.PI) * phi;
+                    mesh.position.setFromSphericalCoords(7 + Math.random()*6, phi, theta);
+                    fotosGroup.add(mesh);
+                }
+            });
+        });
+        scene.add(fotosGroup);
+
+        // --- ESTRELLAS FUGACES (SIN MODIFICAR LO ANTERIOR) ---
+const crearEstrellaFugaz = () => {
+    const geo = new THREE.BufferGeometry();
+    const pts = [];
+    // 1. RASTRO MÁS LARGO: Aumentamos de 20 a 50 puntos para una estela más extensa
+    for(let i=0; i<50; i++) pts.push(0, 0, i * 0.15); 
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    
+    // 2. MÁS BRILLO: Usamos un color blanco puro y nos aseguramos de que sea visible
+    const colorEstrella = Math.random() > 0.5 ? 0xffffff : 0xffb6c1; 
+    const mat = new THREE.LineBasicMaterial({ 
+        color: colorEstrella, 
+        transparent: true, 
+        opacity: 1,
+        linewidth: 2 // Nota: En algunos navegadores el grosor es fijo, pero ayuda
+    });
+    
+    const estrella = new THREE.Line(geo, mat);
+    
+    // Posición inicial aleatoria
+    estrella.position.set((Math.random()-0.5)*60, (Math.random()-0.5)*60, (Math.random()-0.5)*60);
+    estrella.lookAt(new THREE.Vector3(0,0,0)); 
+    
+    scene.add(estrella);
+
+    const velocidad = 0.6 + Math.random() * 0.4;
+    const intervalo = setInterval(() => {
+        estrella.translateZ(-velocidad); 
+        
+        // 3. DESVANECIMIENTO LENTO: Bajamos de 0.02 a 0.008 para que el rastro dure más tiempo en pantalla
+        mat.opacity -= 0.008; 
+        
+        if(mat.opacity <= 0) {
+            scene.remove(estrella);
+            clearInterval(intervalo);
+        }
+    }, 16);
+};
+
+// Lanza una estrella cada 3 o 5 segundos
+setInterval(() => {
+    if(viajeIniciado) crearEstrellaFugaz();
+}, 350);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        camera.position.z = 0.5;
+
+        // --- CONTROLES ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.autoRotate = true;
+        controls.enabled = false; // Bloqueados al inicio
+        controls.enableDamping = true;
+
+        const audio = document.getElementById('miMusica');
+        const overlay = document.getElementById('pantallaCarga');
+        const inst = document.getElementById('instruccion');
+        
+        let viajeIniciado = false;
+        let controlActivado = false;
+
+        overlay.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            audio.play().catch(e => console.log("Error audio:", e));
+            viajeIniciado = true;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            plasmaMat.uniforms.time.value += 0.015;
+            
+            if (viajeIniciado && !controlActivado) {
+                // Movimiento automático inicial (hacia atrás)
+                camera.position.z += 0.05; // Un poco más rápido para que no aburra
+                
+                // Cuando llega a la distancia objetivo (14)
+                if (camera.position.z >= 14) {
+                    controlActivado = true;
+                    controls.enabled = true; // SE ACTIVA EL MANEJO Y ZOOM
+                    inst.style.opacity = '1'; // APARECE EL MENSAJE
+                    
+                    // Quitar el mensaje después de unos segundos
+                    setTimeout(() => { inst.style.opacity = '0'; }, 5000);
+                }
+            }
+
+            mundoGrupo.rotation.y += 0.003;
+            fotosGroup.children.forEach(f => f.lookAt(camera.position));
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
