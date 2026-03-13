@@ -71,19 +71,36 @@
         scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.015 })));
 
         // Mundo Central Sólido con Plasma
-        const mundoGrupo = new THREE.Group();
-        const nucMat = new THREE.MeshStandardMaterial({ color: 0xff1493, emissive: 0xff69b4, emissiveIntensity: 0.7 });
-        mundoGrupo.add(new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), nucMat));
+        // --- SOL REALISTA ---
+const mundoGrupo = new THREE.Group();
 
-        const plasmaMat = new THREE.ShaderMaterial({
-            uniforms: { time: { value: 0 }, color: { value: new THREE.Color(0xff69b4) } },
-            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-            fragmentShader: `varying vec2 vUv; uniform float time; uniform vec3 color; float noise(vec2 p) { return sin(p.x * 12.0 + time) * cos(p.y * 8.0 + time); } void main() { float n = noise(vUv * 4.0); gl_FragColor = vec4(color, smoothstep(0.0, 0.8, n) * 0.4); }`,
-            transparent: true, blending: THREE.AdditiveBlending
-        });
-        mundoGrupo.add(new THREE.Mesh(new THREE.SphereGeometry(2.53, 64, 64), plasmaMat));
-        scene.add(mundoGrupo);
+// Cargamos la textura del sol (puedes usar esta URL directa)
+const solTexture = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/sun.jpg');
 
+// 1. El cuerpo del Sol
+const nucMat = new THREE.MeshStandardMaterial({ 
+    map: solTexture,
+    emissive: 0xffaa00, // Brillo naranja
+    emissiveMap: solTexture,
+    emissiveIntensity: 1.5 
+});
+const solGeom = new THREE.SphereGeometry(2.5, 64, 64);
+const solMesh = new THREE.Mesh(solGeom, nucMat);
+mundoGrupo.add(solMesh);
+
+// 2. Resplandor atmosférico (Aura solar)
+const glowMat = new THREE.SpriteMaterial({
+    map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/lensflare/lensflare0.png'),
+    color: 0xffcc00,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending
+});
+const glow = new THREE.Sprite(glowMat);
+glow.scale.set(12, 12, 1); // El aura es grande
+mundoGrupo.add(glow);
+
+scene.add(mundoGrupo);
         // Fotos Adaptables
         const loader = new THREE.TextureLoader();
         const misFotos = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg'];
@@ -178,6 +195,7 @@ setInterval(() => {
         });
 
         function animate() {
+            solMesh.rotation.y += 0.002;
             requestAnimationFrame(animate);
             plasmaMat.uniforms.time.value += 0.015;
             
@@ -211,3 +229,4 @@ setInterval(() => {
     </script>
 </body>
 </html>
+
