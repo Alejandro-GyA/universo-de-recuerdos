@@ -15,7 +15,6 @@
             color: white; font-size: 2.8rem;
             text-shadow: 0 0 20px #ff69b4, 0 0 40px #ff1493; margin-top: 10px;
         }
-        /* MENSAJE DE INSTRUCCIÓN MEJORADO */
         #instruccion {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             color: white; background: rgba(255, 20, 147, 0.6);
@@ -39,11 +38,11 @@
 
     <div class="interface">
         <h1 class="titulo">Feliz Cumpleaños 🤗💫</h1>
-    <div id="mensajes-romanticos" style="text-align: center; color: #ffb6c1; text-shadow: 0 0 15px rgba(0, 0, 0, 1); pointer-events: none; transition: opacity 1.5s;">
-        <h2 style="font-size: 1.8rem; margin: 0;">Espero te guste esta otra sorpresa 🎁</h2>
-        <p style="font-size: 1.1rem; font-style: italic; margin-top: 8px;">En este dia tan especial para ti ✨ (no tenia mas fotos tuyas 😖).</p>
+        <div id="mensajes-romanticos" style="text-align: center; color: #ffb6c1; text-shadow: 0 0 15px rgba(0, 0, 0, 1); pointer-events: none; transition: opacity 1.5s;">
+            <h2 style="font-size: 1.8rem; margin: 0;">Espero te guste esta otra sorpresa 🎁</h2>
+            <p style="font-size: 1.1rem; font-style: italic; margin-top: 8px;">En este dia tan especial para ti ✨ (no tenia mas fotos tuyas 😖).</p>
+        </div>
     </div>
-</div>
 
     <div id="instruccion">✨ Ya puedes moverte y hacer zoom libremente ✨</div>
 
@@ -63,46 +62,44 @@
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
-        // Estrellas
+        // Estrellas de fondo
         const starsGeo = new THREE.BufferGeometry();
         const starsPos = [];
         for(let i=0; i<10000; i++) starsPos.push((Math.random()-0.5)*120, (Math.random()-0.5)*120, (Math.random()-0.5)*120);
         starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
         scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.015 })));
 
-        // Mundo Central Sólido con Plasma
         // --- SOL REALISTA ---
-const mundoGrupo = new THREE.Group();
-
-// Cargamos la textura del sol (puedes usar esta URL directa)
-const solTexture = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/sun.jpg');
-
-// 1. El cuerpo del Sol
-const nucMat = new THREE.MeshStandardMaterial({ 
-    map: solTexture,
-    emissive: 0xffaa00, // Brillo naranja
-    emissiveMap: solTexture,
-    emissiveIntensity: 1.5 
-});
-const solGeom = new THREE.SphereGeometry(2.5, 64, 64);
-const solMesh = new THREE.Mesh(solGeom, nucMat);
-mundoGrupo.add(solMesh);
-
-// 2. Resplandor atmosférico (Aura solar)
-const glowMat = new THREE.SpriteMaterial({
-    map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/lensflare/lensflare0.png'),
-    color: 0xffcc00,
-    transparent: true,
-    opacity: 0.8,
-    blending: THREE.AdditiveBlending
-});
-const glow = new THREE.Sprite(glowMat);
-glow.scale.set(12, 12, 1); // El aura es grande
-mundoGrupo.add(glow);
-
-scene.add(mundoGrupo);
-        // Fotos Adaptables
+        const mundoGrupo = new THREE.Group();
         const loader = new THREE.TextureLoader();
+        
+        // Textura solar de la NASA
+        const solTexture = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/sun.jpg');
+
+        const solMat = new THREE.MeshStandardMaterial({ 
+            map: solTexture,
+            emissive: 0xffaa00,
+            emissiveMap: solTexture,
+            emissiveIntensity: 1.5 
+        });
+        
+        const solMesh = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), solMat);
+        mundoGrupo.add(solMesh);
+
+        // Aura de luz (Glow)
+        const glowMat = new THREE.SpriteMaterial({
+            map: loader.load('https://threejs.org/examples/textures/lensflare/lensflare0.png'),
+            color: 0xffcc00,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+        const glow = new THREE.Sprite(glowMat);
+        glow.scale.set(12, 12, 1);
+        mundoGrupo.add(glow);
+        scene.add(mundoGrupo);
+
+        // Fotos Adaptables
         const misFotos = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg'];
         const fotosGroup = new THREE.Group();
 
@@ -121,6 +118,7 @@ scene.add(mundoGrupo);
                     const index = i * 20 + j;
                     const phi = Math.acos(-1 + (2 * index) / 80);
                     const theta = Math.sqrt(80 * Math.PI) * phi;
+                    // Mantenemos la posición original de las fotos
                     mesh.position.setFromSphericalCoords(7 + Math.random()*6, phi, theta);
                     fotosGroup.add(mesh);
                 }
@@ -128,88 +126,66 @@ scene.add(mundoGrupo);
         });
         scene.add(fotosGroup);
 
-        // --- ESTRELLAS FUGACES (SIN MODIFICAR LO ANTERIOR) ---
-const crearEstrellaFugaz = () => {
-    const geo = new THREE.BufferGeometry();
-    const pts = [];
-    // 1. RASTRO MÁS LARGO: Aumentamos de 20 a 50 puntos para una estela más extensa
-    for(let i=0; i<50; i++) pts.push(0, 0, i * 0.15); 
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    
-    // 2. MÁS BRILLO: Usamos un color blanco puro y nos aseguramos de que sea visible
-    const colorEstrella = Math.random() > 0.5 ? 0xffffff : 0xffb6c1; 
-    const mat = new THREE.LineBasicMaterial({ 
-        color: colorEstrella, 
-        transparent: true, 
-        opacity: 1,
-        linewidth: 2 // Nota: En algunos navegadores el grosor es fijo, pero ayuda
-    });
-    
-    const estrella = new THREE.Line(geo, mat);
-    
-    // Posición inicial aleatoria
-    estrella.position.set((Math.random()-0.5)*60, (Math.random()-0.5)*60, (Math.random()-0.5)*60);
-    estrella.lookAt(new THREE.Vector3(0,0,0)); 
-    
-    scene.add(estrella);
+        // --- ESTRELLAS FUGACES ---
+        const crearEstrellaFugaz = () => {
+            const geo = new THREE.BufferGeometry();
+            const pts = [];
+            for(let i=0; i<50; i++) pts.push(0, 0, i * 0.15); 
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+            const colorEstrella = Math.random() > 0.5 ? 0xffffff : 0xffb6c1; 
+            const mat = new THREE.LineBasicMaterial({ color: colorEstrella, transparent: true, opacity: 1 });
+            const estrella = new THREE.Line(geo, mat);
+            estrella.position.set((Math.random()-0.5)*60, (Math.random()-0.5)*60, (Math.random()-0.5)*60);
+            estrella.lookAt(new THREE.Vector3(0,0,0)); 
+            scene.add(estrella);
 
-    const velocidad = 0.6 + Math.random() * 0.4;
-    const intervalo = setInterval(() => {
-        estrella.translateZ(-velocidad); 
-        
-        // 3. DESVANECIMIENTO LENTO: Bajamos de 0.02 a 0.008 para que el rastro dure más tiempo en pantalla
-        mat.opacity -= 0.008; 
-        
-        if(mat.opacity <= 0) {
-            scene.remove(estrella);
-            clearInterval(intervalo);
-        }
-    }, 16);
-};
+            const velocidad = 0.6 + Math.random() * 0.4;
+            const intervalo = setInterval(() => {
+                estrella.translateZ(-velocidad); 
+                mat.opacity -= 0.008; 
+                if(mat.opacity <= 0) {
+                    scene.remove(estrella);
+                    clearInterval(intervalo);
+                }
+            }, 16);
+        };
 
-// Lanza una estrella cada 3 o 5 segundos
-setInterval(() => {
-    if(viajeIniciado) crearEstrellaFugaz();
-}, 350);
+        let viajeIniciado = false;
+        let controlActivado = false;
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        setInterval(() => { if(viajeIniciado) crearEstrellaFugaz(); }, 350);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
         camera.position.z = 0.5;
 
         // --- CONTROLES ---
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.autoRotate = true;
-        controls.enabled = false; // Bloqueados al inicio
+        controls.enabled = false;
         controls.enableDamping = true;
 
         const audio = document.getElementById('miMusica');
         const overlay = document.getElementById('pantallaCarga');
         const inst = document.getElementById('instruccion');
         
-        let viajeIniciado = false;
-        let controlActivado = false;
-
         overlay.addEventListener('click', () => {
             overlay.style.display = 'none';
-            audio.play().catch(e => console.log("Error audio:", e));
+            audio.play().catch(e => console.log(e));
             viajeIniciado = true;
         });
 
         function animate() {
-            solMesh.rotation.y += 0.002;
             requestAnimationFrame(animate);
-            plasmaMat.uniforms.time.value += 0.015;
+            
+            // Animamos la rotación del sol
+            solMesh.rotation.y += 0.002;
             
             if (viajeIniciado && !controlActivado) {
-                // Movimiento automático inicial (hacia atrás)
-                camera.position.z += 0.05; // Un poco más rápido para que no aburra
-                
-                // Cuando llega a la distancia objetivo (14)
+                camera.position.z += 0.05; 
                 if (camera.position.z >= 14) {
                     controlActivado = true;
-                    controls.enabled = true; // SE ACTIVA EL MANEJO Y ZOOM
-                    inst.style.opacity = '1'; // APARECE EL MENSAJE
-                    
-                    // Quitar el mensaje después de unos segundos
+                    controls.enabled = true; // Activa movimiento y zoom
+                    inst.style.opacity = '1';
                     setTimeout(() => { inst.style.opacity = '0'; }, 5000);
                 }
             }
@@ -229,4 +205,3 @@ setInterval(() => {
     </script>
 </body>
 </html>
-
