@@ -94,46 +94,107 @@ loader.load(
 const solMesh = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), solMat);
 mundoGrupo.add(solMesh);
 
-// Aura (Resplandor)
+// --- CORONA SOLAR DINÁMICA MEJORADA (REEMPLAZO DEL AURA) ---
+const coronaGeo = new THREE.SphereGeometry(2.6, 64, 64);
+const coronaMat = new THREE.ShaderMaterial({
+    uniforms: {
+        time: { value: 0 },
+        color: { value: new THREE.Color(0xffaa00) } // Color de los rayos dinámicos
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main() {
+            vUv = uv;
+            vNormal = normalize(normalMatrix * normal);
+            vPosition = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform float time;
+        uniform vec3 color;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+
+        float noise(vec3 p) {
+            vec3 i = floor(p);
+            vec3 f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            float n = dot(i, vec3(1.0, 57.0, 113.0));
+            return mix(mix(mix(sin(n), sin(n + 1.0), f.x),
+                           mix(sin(n + 57.0), sin(n + 58.0), f.x), f.y),
+                       mix(mix(sin(n + 113.0), sin(n + 114.0), f.x),
+                           mix(sin(n + 170.0), sin(n + 171.0), f.x), f.y), f.z);
+        }
+
+        void main() {
+            float fresnel = pow(1.5 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+            float n = noise(vPosition * 3.0 - time * 0.8);
+            n += noise(vPosition * 6.0 + time * 0.5) * 0.5;
+            float alpha = fresnel * (n * 0.4 + 0.6);
+            vec3 finalColor = mix(color, vec3(1.0, 0.2, 0.0), n * 0.3);
+            gl_FragColor = vec4(finalColor, alpha * 0.8);
+        }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    side: THREE.BackSide 
+});
+
+const coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
+mundoGrupo.add(coronaMesh);
+
+// Brillo central suave (mantiene la esencia del anterior pero mejorado)
 const glowMat = new THREE.SpriteMaterial({
     map: loader.load('https://threejs.org/examples/textures/lensflare/lensflare0.png'),
-    color: miColor,
+    color: 0xff8800,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.6,
     blending: THREE.AdditiveBlending
 });
 const glow = new THREE.Sprite(glowMat);
-glow.scale.set(12, 12, 1);
+glow.scale.set(10, 10, 1);
 mundoGrupo.add(glow);
 
 scene.add(mundoGrupo);
 
         // Fotos Adaptables
-        const misFotos = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg'];
-        const fotosGroup = new THREE.Group();
+    const misFotos = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg', '5.jpeg', '6.jpeg']; 
+    const fotosGroup = new THREE.Group();
 
-        misFotos.forEach((nombre, i) => {
-            loader.load(nombre, (texture) => {
-                texture.encoding = THREE.sRGBEncoding;
-                const aspecto = texture.image.width / texture.image.height;
-                const mat = new THREE.ShaderMaterial({
-                    uniforms: { uTexture: { value: texture } },
-                    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-                    fragmentShader: `varying vec2 vUv; uniform sampler2D uTexture; void main() { vec2 uv = vUv - 0.5; if (length(max(abs(uv) - 0.43, 0.0)) > 0.08) discard; gl_FragColor = texture2D(uTexture, vUv); }`,
-                    transparent: true, side: THREE.DoubleSide
-                });
-                for(let j=0; j<20; j++) {
-                    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2 * aspecto, 1.2), mat);
-                    const index = i * 20 + j;
-                    const phi = Math.acos(-1 + (2 * index) / 80);
-                    const theta = Math.sqrt(80 * Math.PI) * phi;
-                    // Mantenemos la posición original de las fotos
-                    mesh.position.setFromSphericalCoords(7 + Math.random()*6, phi, theta);
-                    fotosGroup.add(mesh);
-                }
-            });
+// Calculamos el total real de objetos (ejemplo: 5 fotos * 20 copias = 100)
+const totalObjetos = misFotos.length * 20;
+
+misFotos.forEach((nombre, i) => {
+    loader.load(nombre, (texture) => {
+        texture.encoding = THREE.sRGBEncoding;
+        const aspecto = texture.image.width / texture.image.height;
+        const mat = new THREE.ShaderMaterial({
+            uniforms: { uTexture: { value: texture } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            fragmentShader: `varying vec2 vUv; uniform sampler2D uTexture; void main() { vec2 uv = vUv - 0.5; if (length(max(abs(uv) - 0.43, 0.0)) > 0.08) discard; gl_FragColor = texture2D(uTexture, vUv); }`,
+            transparent: true, side: THREE.DoubleSide
         });
-        scene.add(fotosGroup);
+
+        for(let j=0; j<20; j++) {
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2 * aspecto, 1.2), mat);
+            
+            // Usamos el índice global (de 0 a 99 si son 5 fotos)
+            const indexGlobal = i * 20 + j;
+            
+            // REPARTO EQUITATIVO: Ahora dividimos por totalObjetos en lugar de 80
+            const phi = Math.acos(-1 + (2 * indexGlobal) / totalObjetos);
+            const theta = Math.sqrt(totalObjetos * Math.PI) * phi;
+            
+            mesh.position.setFromSphericalCoords(7 + Math.random()*6, phi, theta);
+            fotosGroup.add(mesh);
+        }
+    });
+});
+scene.add(fotosGroup);
 
         // --- ESTRELLAS FUGACES ---
         const crearEstrellaFugaz = () => {
@@ -185,7 +246,7 @@ scene.add(mundoGrupo);
 
         function animate() {
             requestAnimationFrame(animate);
-            
+            coronaMat.uniforms.time.value += 0.06;
             // Animamos la rotación del sol
             solMesh.rotation.y += 0.002;
             
@@ -214,4 +275,3 @@ scene.add(mundoGrupo);
     </script>
 </body>
 </html>
-
