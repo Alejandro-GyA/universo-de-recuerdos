@@ -69,35 +69,44 @@
         starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
         scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.015 })));
 
-        // --- SOL REALISTA ---
-        const mundoGrupo = new THREE.Group();
-        const loader = new THREE.TextureLoader();
-        
-        // Textura solar de la NASA
-        const solTexture = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/sun.jpg');
+        // --- SOL CONFIGURABLE ---
+// --- SOL CONFIGURABLE (ANTI-NEGRO) ---
+const mundoGrupo = new THREE.Group();
+const loader = new THREE.TextureLoader();
 
-        const solMat = new THREE.MeshStandardMaterial({ 
-            map: solTexture,
-            emissive: 0xffaa00,
-            emissiveMap: solTexture,
-            emissiveIntensity: 1.5 
-        });
-        
-        const solMesh = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), solMat);
-        mundoGrupo.add(solMesh);
+// 1. ELIGE EL COLOR AQUÍ
+const miColor = 0xffa500; // Rojo (Cámbialo a 0x00ffff para celeste, etc.)
 
-        // Aura de luz (Glow)
-        const glowMat = new THREE.SpriteMaterial({
-            map: loader.load('https://threejs.org/examples/textures/lensflare/lensflare0.png'),
-            color: 0xffcc00,
-            transparent: true,
-            opacity: 0.6,
-            blending: THREE.AdditiveBlending
-        });
-        const glow = new THREE.Sprite(glowMat);
-        glow.scale.set(12, 12, 1);
-        mundoGrupo.add(glow);
-        scene.add(mundoGrupo);
+// Creamos el material con el color PRIMERO
+const solMat = new THREE.MeshBasicMaterial({ 
+    color: miColor 
+});
+
+// Intentamos cargar la textura encima, si falla, se queda el color de arriba
+loader.load(
+    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/sun.jpg',
+    (texture) => {
+        solMat.map = texture;
+        solMat.needsUpdate = true;
+    }
+);
+
+const solMesh = new THREE.Mesh(new THREE.SphereGeometry(2.5, 64, 64), solMat);
+mundoGrupo.add(solMesh);
+
+// Aura (Resplandor)
+const glowMat = new THREE.SpriteMaterial({
+    map: loader.load('https://threejs.org/examples/textures/lensflare/lensflare0.png'),
+    color: miColor,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending
+});
+const glow = new THREE.Sprite(glowMat);
+glow.scale.set(12, 12, 1);
+mundoGrupo.add(glow);
+
+scene.add(mundoGrupo);
 
         // Fotos Adaptables
         const misFotos = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg'];
@@ -155,7 +164,7 @@
 
         setInterval(() => { if(viajeIniciado) crearEstrellaFugaz(); }, 350);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        scene.add(new THREE.AmbientLight(0xffffff, 1.5));
         camera.position.z = 0.5;
 
         // --- CONTROLES ---
@@ -205,3 +214,4 @@
     </script>
 </body>
 </html>
+
